@@ -1,9 +1,9 @@
 {
-  "name": "plasmo-ai-extension",
-  "displayName": "Plasmo ai extension",
-  "version": "0.0.1",
-  "description": "A basic Plasmo extension.",
-  "author": "Plasmo Corp. <foss@plasmo.com>",
+  "name": "contextiq",
+  "displayName": "ContextIQ — Browser AI Agent",
+  "version": "1.0.0",
+  "description": "Domain-aware, multi-agent browser intelligence assistant powered by Grok AI.",
+  "author": "ContextIQ",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
@@ -20,12 +20,22 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
     "prettier": "3.2.4",
+    "tailwindcss": "^3.4.19",
     "typescript": "5.3.3"
   },
   "manifest": {
     "host_permissions": [
-      "https://*/*"
+      "https://*/*",
+      "http://*/*"
+    ],
+    "permissions": [
+      "activeTab",
+      "scripting",
+      "storage",
+      "tabs"
     ]
   }
 }
