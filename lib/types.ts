@@ -1,4 +1,4 @@
-export type Intent = "fix_grammar" | "rewrite" | "change_tone" | "expand" | "shorten" | "bullet_summary" | "key_insights" | "action_items" | "risk_flags" | "explain" | "debug" | "solve" | "extract"
+export type Intent = "fix_grammar" | "rewrite" | "change_tone" | "expand" | "shorten" | "draft" | "bullet_summary" | "key_insights" | "action_items" | "risk_flags" | "explain" | "debug" | "solve" | "extract"
 
 export type AgentType = "writing" | "summary" | "solver"
 

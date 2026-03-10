@@ -10,6 +10,7 @@ const AGENT_MAP: Record<string, AgentType> = {
   change_tone: "writing",
   expand: "writing",
   shorten: "writing",
+  draft: "writing",
   bullet_summary: "summary",
   key_insights: "summary",
   action_items: "summary",
