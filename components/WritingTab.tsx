@@ -7,7 +7,7 @@ interface Props {
   activeTabId: number | null
 }
 
-const ACTIONS: { label: string; intent: Intent }[] = [
+const EDIT_ACTIONS: { label: string; intent: Intent }[] = [
   { label: "Fix Grammar", intent: "fix_grammar" },
   { label: "Rewrite", intent: "rewrite" },
   { label: "Change Tone", intent: "change_tone" },
@@ -15,8 +15,11 @@ const ACTIONS: { label: string; intent: Intent }[] = [
   { label: "Shorten", intent: "shorten" },
 ]
 
+type Mode = "edit" | "draft"
+
 export function WritingTab({ context, activeTabId }: Props) {
-  const [writingText, setWritingText] = useState(context.selectedText ?? "")
+  const [mode, setMode] = useState<Mode>("edit")
+  const [editText, setEditText] = useState(context.selectedText ?? "")
   const [draftPrompt, setDraftPrompt] = useState("")
   const [tone, setTone] = useState<ToneOption>("professional")
   const [result, setResult] = useState<StructuredResult | null>(null)
@@ -24,7 +27,7 @@ export function WritingTab({ context, activeTabId }: Props) {
   const [loading, setLoading] = useState(false)
   const [activeIntent, setActiveIntent] = useState<Intent | null>(null)
 
-  const sendMessage = (intent: Intent, selectedText: string, userInput?: string) => {
+  const send = (intent: Intent, selectedText: string, userInput?: string) => {
     setLoading(true)
     setError(null)
     setResult(null)
@@ -33,48 +36,49 @@ export function WritingTab({ context, activeTabId }: Props) {
     chrome.runtime.sendMessage(
       {
         type: "RUN_AGENT",
-        payload: {
-          intent,
-          context: { ...context, selectedText },
-          tone,
-          userInput,
-        },
+        payload: { intent, context: { ...context, selectedText }, tone, userInput },
       },
       (response) => {
         setLoading(false)
         setActiveIntent(null)
-        if (response?.success) {
-          setResult(response.data as StructuredResult)
-        } else {
-          setError(response?.error ?? "Unknown error occurred")
-        }
+        if (response?.success) setResult(response.data as StructuredResult)
+        else setError(response?.error ?? "Unknown error occurred")
       }
     )
   }
 
-  const run = (intent: Intent) => {
-    if (!writingText.trim()) {
-      setError("Please enter some text to work with.")
-      return
-    }
-    sendMessage(intent, writingText)
+  const runEdit = (intent: Intent) => {
+    if (!editText.trim()) { setError("Please enter some text."); return }
+    send(intent, editText)
   }
 
   const runDraft = () => {
-    if (!draftPrompt.trim()) {
-      setError("Please describe what you want to draft.")
-      return
-    }
-    sendMessage("draft", "", draftPrompt)
+    if (!draftPrompt.trim()) { setError("Please describe what you want to write."); return }
+    send("draft", "", draftPrompt)
   }
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Mode toggle */}
+      <div className="flex rounded-lg bg-neutral-900 border border-white/10 p-1 gap-1">
+        {(["edit", "draft"] as Mode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); setError(null); setResult(null) }}
+            className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${
+              mode === m ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            {m === "edit" ? "✏️ Edit" : "✍️ Draft"}
+          </button>
+        ))}
+      </div>
+
       {/* Tone selector */}
-      <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">Tone</label>
+      <div className="flex items-center gap-2">
+        <label className="text-[11px] font-medium text-neutral-500 whitespace-nowrap">Tone</label>
         <select
-          className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-200 text-xs px-3 py-2 focus:outline-none focus:border-violet-500/50"
+          className="flex-1 rounded-lg bg-neutral-900 border border-white/10 text-neutral-200 text-xs px-3 py-2 focus:outline-none focus:border-violet-500/50"
           value={tone}
           onChange={(e) => setTone(e.target.value as ToneOption)}
         >
@@ -87,58 +91,54 @@ export function WritingTab({ context, activeTabId }: Props) {
         </select>
       </div>
 
-      {/* Draft section */}
-      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-neutral-900 p-3">
-        <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">✏️ Draft a message</label>
-        <textarea
-          className="w-full rounded-lg bg-black border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600 min-h-[60px]"
-          placeholder='Describe what to write, e.g. "email to my manager asking for Friday off"'
-          value={draftPrompt}
-          onChange={(e) => setDraftPrompt(e.target.value)}
-        />
-        <button
-          onClick={runDraft}
-          disabled={loading}
-          className={`w-full py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-            activeIntent === "draft"
-              ? "bg-violet-600 text-white"
-              : "bg-violet-600/80 hover:bg-violet-600 text-white"
-          }`}
-        >
-          {activeIntent === "draft" ? "Drafting..." : "Draft"}
-        </button>
-      </div>
+      {/* Edit mode */}
+      {mode === "edit" && (
+        <>
+          <textarea
+            className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600 min-h-[110px]"
+            placeholder="Paste or type your text here, or select text on the page before opening..."
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
+          <div className="flex flex-wrap gap-2">
+            {EDIT_ACTIONS.map(({ label, intent }) => (
+              <button
+                key={intent}
+                onClick={() => runEdit(intent)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  activeIntent === intent ? "bg-violet-600 text-white" : "bg-white/10 text-neutral-300 hover:bg-white/20"
+                }`}
+              >
+                {activeIntent === intent ? "..." : label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-      {/* Edit existing text */}
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">Edit existing text</label>
-        <textarea
-          className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600 min-h-[90px]"
-          placeholder="Type or paste your text here, or select text on the page before opening..."
-          value={writingText}
-          onChange={(e) => setWritingText(e.target.value)}
-        />
-        <div className="flex flex-wrap gap-2">
-          {ACTIONS.map(({ label, intent }) => (
-            <button
-              key={intent}
-              onClick={() => run(intent)}
-              disabled={loading}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                activeIntent === intent
-                  ? "bg-violet-600 text-white"
-                  : "bg-white/10 text-neutral-300 hover:bg-white/20"
-              }`}
-            >
-              {activeIntent === intent ? "..." : label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Draft mode */}
+      {mode === "draft" && (
+        <>
+          <textarea
+            className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600 min-h-[110px]"
+            placeholder='Describe what to write, e.g. "a follow-up email to a client about the project deadline"'
+            value={draftPrompt}
+            onChange={(e) => setDraftPrompt(e.target.value)}
+          />
+          <button
+            onClick={runDraft}
+            disabled={loading}
+            className="w-full py-2 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {activeIntent === "draft" ? "Drafting..." : "Generate Draft"}
+          </button>
+        </>
+      )}
 
       {loading && (
-        <div className="flex flex-col items-center gap-2 py-4">
-          <div className="w-5 h-5 rounded-full border-2 border-neutral-700 border-t-violet-500 animate-spin" />
+        <div className="flex items-center justify-center gap-2 py-4">
+          <div className="w-4 h-4 rounded-full border-2 border-neutral-700 border-t-violet-500 animate-spin" />
           <span className="text-xs text-neutral-500">Thinking...</span>
         </div>
       )}
