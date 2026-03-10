@@ -12,7 +12,7 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
   const isWriting = WRITING_INTENTS.has(intent)
 
   const selectedStr = selectedText ? `\n\nText to process:\n"""${selectedText}"""` : ""
-  const pageLimit = intent === "multi_tab_summary" ? 20000 : 3000
+  const pageLimit = intent === "multi_tab_summary" ? 20000 : 8000
   const pageStr = !isWriting && context ? `\n\nPage context:\n"""${context.slice(0, pageLimit)}"""` : ""
   const customStr = userInput ? `\n\nUser instruction: ${userInput}` : ""
 

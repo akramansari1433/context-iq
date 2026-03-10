@@ -23,13 +23,23 @@ const QUICK_TOOLS: { label: string; intent: Intent; icon: string }[] = [
   { label: "Risk Flags", intent: "risk_flags", icon: "⚠️" },
 ]
 
-// Self-contained — injected into other tabs
-function extractTabContent() {
+// Self-contained — injected into other tabs. charLimit passed via args.
+function extractTabContent(charLimit: number) {
   const clone = document.body.cloneNode(true) as HTMLElement
-  clone.querySelectorAll("script, style, nav, footer, aside").forEach((el) => el.remove())
+  clone.querySelectorAll("script, style, nav, footer, aside, header, [role=banner], [role=navigation]").forEach((el) => el.remove())
+
+  // Pull headings separately so they're always included as structure
+  const headings = Array.from(document.querySelectorAll("h1, h2, h3"))
+    .map((el) => el.textContent?.trim())
+    .filter(Boolean)
+    .join(" · ")
+
+  const body = clone.innerText.trim()
+  const combined = headings ? `[Topics: ${headings}]\n\n${body}` : body
+
   return {
     title: document.title,
-    content: clone.innerText.slice(0, 2000).trim(),
+    content: combined.slice(0, charLimit).trim(),
   }
 }
 
@@ -104,12 +114,15 @@ export function SummarizeTab({ context, activeTabId }: Props) {
     setResult(null)
     setActiveIntent("multi_tab_summary")
 
+    // Dynamic budget: total 20k chars split evenly across tabs, max 6000 per tab
+    const charsPerTab = Math.min(6000, Math.floor(20000 / selected.length))
+
     // Extract content from each selected tab in parallel
     const contents = await Promise.all(
       selected.map((tab) =>
         new Promise<{ title: string; content: string } | null>((resolve) => {
           chrome.scripting.executeScript(
-            { target: { tabId: tab.id }, func: extractTabContent },
+            { target: { tabId: tab.id }, func: extractTabContent, args: [charsPerTab] },
             (results) => {
               if (chrome.runtime.lastError || !results?.[0]?.result) {
                 resolve(null)
