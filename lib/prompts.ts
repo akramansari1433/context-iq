@@ -12,7 +12,8 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
   const isWriting = WRITING_INTENTS.has(intent)
 
   const selectedStr = selectedText ? `\n\nText to process:\n"""${selectedText}"""` : ""
-  const pageStr = !isWriting && context ? `\n\nPage context:\n"""${context.slice(0, 3000)}"""` : ""
+  const pageLimit = intent === "multi_tab_summary" ? 20000 : 3000
+  const pageStr = !isWriting && context ? `\n\nPage context:\n"""${context.slice(0, pageLimit)}"""` : ""
   const customStr = userInput ? `\n\nUser instruction: ${userInput}` : ""
 
   const schemas: Record<Intent, string> = {
@@ -28,6 +29,8 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
     key_insights: `Extract key insights and important information. Return: {"summary": "brief overview", "keyPoints": ["insight 1", ...]}`,
     action_items: `Extract all action items and next steps from the content. Return: {"actionItems": ["action 1", ...]}`,
     risk_flags: `Identify risks, concerns, and warnings in the content. Return: {"risks": ["risk 1", ...], "summary": "overall risk assessment"}`,
+    ask_page: `Answer the user's question based strictly on the page content. Be direct and concise. Return: {"output": "answer", "keyPoints": ["supporting point 1", ...]}`,
+    multi_tab_summary: `You are given content from multiple browser tabs the user has open. Synthesize them into a unified research summary. Identify common themes, key findings, and any conflicting information across sources. Return: {"output": "unified summary paragraph", "keyPoints": ["theme or finding 1", ...]}`,
     explain: `Explain the selected content clearly, as if teaching someone. Return: {"output": "explanation"}`,
     debug: `Analyze this code or error and suggest fixes. Return: {"output": "diagnosis and fix", "keyPoints": ["fix 1", ...]}`,
     solve: `Solve the problem or answer the question. Return: {"output": "solution", "keyPoints": ["step 1", ...]}`,

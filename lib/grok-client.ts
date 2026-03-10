@@ -15,6 +15,8 @@ const AGENT_MAP: Record<string, AgentType> = {
   key_insights: "summary",
   action_items: "summary",
   risk_flags: "summary",
+  ask_page: "summary",
+  multi_tab_summary: "summary",
   explain: "solver",
   debug: "solver",
   solve: "solver",
