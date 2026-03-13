@@ -1,34 +1,83 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# ContextIQ — Browser AI Agent
+
+A multi-agent Chrome extension that provides AI-powered writing assistance, page summarization, multi-tab research synthesis, and problem solving — all powered by Groq's LLaMA 3.3 70B model.
+
+## Features
+
+- **Writing Agent** — Fix grammar, rewrite, change tone, expand, shorten, or draft new content
+- **Summarize Agent** — Bullet summaries, key insights, action items, risk flags, and free-form Q&A on any page
+- **Research Mode** — Select multiple open tabs and synthesize a unified research summary with dynamic content budgeting
+- **Solve Agent** — Explain problems with hints or generate complete code solutions
+- **Replace in Page** — Directly replace selected text in editable fields (inputs, textareas) with AI output
+
+## Architecture
+
+```
+popup.tsx                  # Main UI — tab navigation, context extraction
+├── components/
+│   ├── WritingTab.tsx      # Edit & Draft modes with tone selection
+│   ├── SummarizeTab.tsx    # Page & Research modes, multi-tab extraction
+│   ├── SolveTab.tsx        # Explain & Solve with optional instructions
+│   ├── SettingsTab.tsx     # API key management, log viewer
+│   └── ResultBox.tsx       # Shared result display with code detection
+├── lib/
+│   ├── types.ts            # Shared TypeScript types
+│   ├── prompts.ts          # Intent-specific prompt builder
+│   ├── grok-client.ts      # Groq API client with JSON parsing
+│   ├── logger.ts           # Structured logging (chrome.storage.local)
+│   ├── rate-limiter.ts     # Sliding window rate limiter (10 req/min)
+│   └── security.ts         # Input validation & prompt injection detection
+├── background.ts           # Service worker — message routing, API calls
+├── content.ts              # Content script — page context & text replacement
+└── tests/                  # Unit tests (vitest)
+```
+
+**Data Flow:**
+1. User interacts with popup UI
+2. Popup sends message to background service worker
+3. Background validates input (security), checks rate limit, calls Groq API
+4. Structured JSON response is parsed and logged
+5. Result displayed in popup; user can copy or replace text in page
+
+## Production Readiness
+
+| Area | Implementation |
+|------|---------------|
+| **Observability** | Structured logging of every API call (intent, latency, success/failure, I/O sizes). Viewable in Settings > Logs |
+| **Rate Limiting** | Sliding window limiter — 10 requests per 60 seconds with user-friendly retry messages |
+| **Security** | Input length caps (10K chars), prompt injection detection (7 patterns), control character sanitization |
+| **Error Handling** | Graceful fallbacks at every layer — API errors, JSON parse failures, content script failures |
+| **Testing** | 26 unit tests covering prompts, rate limiter, and security validation |
+| **Storage** | API key in `chrome.storage.sync` (encrypted), logs in `chrome.storage.local` with 100-entry rotation |
+
+## Tech Stack
+
+- **Framework:** Plasmo 0.90.5 (Chrome Extension with React 18)
+- **Styling:** Tailwind CSS 3 with JIT mode
+- **AI:** Groq API — LLaMA 3.3 70B Versatile
+- **Testing:** Vitest
+- **Language:** TypeScript 5.3
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+pnpm install
+
+# Start development server
 pnpm dev
-# or
-npm run dev
-```
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+# Load extension: chrome://extensions → Load unpacked → build/chrome-mv3-dev
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
+# Run tests
+pnpm test
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
-
-```bash
+# Production build
 pnpm build
-# or
-npm run build
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+## Configuration
 
-## Submit to the webstores
-
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
-# context-iq
+1. Get a free API key from [console.groq.com](https://console.groq.com)
+2. Open the extension popup → Settings tab
+3. Paste your API key and click Save

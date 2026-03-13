@@ -32,9 +32,7 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
     ask_page: `Answer the user's question based strictly on the page content. Be direct and concise. Return: {"output": "answer", "keyPoints": ["supporting point 1", ...]}`,
     multi_tab_summary: `You are given content from multiple browser tabs the user has open. Synthesize them into a unified research summary. Identify common themes, key findings, and any conflicting information across sources. Return: {"output": "unified summary paragraph", "keyPoints": ["theme or finding 1", ...]}`,
     explain: `Explain what the problem is, why it happens, and how to approach solving it. Give hints and guide the user's thinking without giving the full solution. Return: {"output": "clear explanation with hints"}`,
-    debug: `Analyze this code or error and suggest fixes. Return: {"output": "diagnosis and fix", "keyPoints": ["fix 1", ...]}`,
     solve: `Solve the problem. If it is a coding/algorithm problem, provide a complete working code solution — not pseudocode, not descriptions. If the user specified a language, use that language, otherwise default to Python. Include brief comments in the code. Return: {"output": "the complete code solution", "keyPoints": ["brief explanation of approach"]}`,
-    extract: `Extract the key information from the content. Return: {"output": "what was extracted", "keyPoints": ["item 1", ...]}`,
   }
 
   return `${schemas[intent]}${selectedStr}${pageStr}${customStr}

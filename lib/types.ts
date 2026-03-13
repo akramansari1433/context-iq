@@ -1,4 +1,4 @@
-export type Intent = "fix_grammar" | "rewrite" | "change_tone" | "expand" | "shorten" | "draft" | "bullet_summary" | "key_insights" | "action_items" | "risk_flags" | "ask_page" | "multi_tab_summary" | "explain" | "debug" | "solve" | "extract"
+export type Intent = "fix_grammar" | "rewrite" | "change_tone" | "expand" | "shorten" | "draft" | "bullet_summary" | "key_insights" | "action_items" | "risk_flags" | "ask_page" | "multi_tab_summary" | "explain" | "solve"
 
 export type AgentType = "writing" | "summary" | "solver"
 
@@ -34,11 +34,14 @@ export interface StructuredResult {
     risks?: string[]
   }
   latencyMs: number
+  tokenUsage?: { prompt: number; completion: number; total: number }
 }
 
 export type MessageRequest =
   | { type: "GET_CONTEXT" }
   | { type: "RUN_AGENT"; payload: Omit<AgentRequest, "apiKey"> }
+  | { type: "GET_LOGS" }
+  | { type: "CLEAR_LOGS" }
 
 export type MessageResponse<T = unknown> =
   | { success: true; data: T }

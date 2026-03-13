@@ -18,9 +18,7 @@ const AGENT_MAP: Record<string, AgentType> = {
   ask_page: "summary",
   multi_tab_summary: "summary",
   explain: "solver",
-  debug: "solver",
   solve: "solver",
-  extract: "solver",
 }
 
 export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult> {
@@ -75,6 +73,7 @@ export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult>
     }
   }
 
+  const usage = data.usage
   return {
     intent: req.intent,
     agent,
@@ -85,5 +84,10 @@ export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult>
       risks: parsed.risks as string[],
     },
     latencyMs: Date.now() - startTime,
+    tokenUsage: usage ? {
+      prompt: usage.prompt_tokens ?? 0,
+      completion: usage.completion_tokens ?? 0,
+      total: usage.total_tokens ?? 0,
+    } : undefined,
   }
 }

@@ -28,7 +28,6 @@ function extractTabContent(charLimit: number) {
   const clone = document.body.cloneNode(true) as HTMLElement
   clone.querySelectorAll("script, style, nav, footer, aside, header, [role=banner], [role=navigation]").forEach((el) => el.remove())
 
-  // Pull headings separately so they're always included as structure
   const headings = Array.from(document.querySelectorAll("h1, h2, h3"))
     .map((el) => el.textContent?.trim())
     .filter(Boolean)
@@ -53,7 +52,6 @@ export function SummarizeTab({ context, activeTabId }: Props) {
   const [loading, setLoading] = useState(false)
   const [activeIntent, setActiveIntent] = useState<Intent | null>(null)
 
-  // Load open tabs when switching to research mode
   useEffect(() => {
     if (mode !== "research") return
     setTabsLoading(true)
@@ -65,7 +63,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
             id: t.id!,
             title: t.title ?? t.url ?? "Untitled",
             url: t.url ?? "",
-            selected: true, // select all by default
+            selected: true,
           }))
       )
       setTabsLoading(false)
@@ -114,10 +112,8 @@ export function SummarizeTab({ context, activeTabId }: Props) {
     setResult(null)
     setActiveIntent("multi_tab_summary")
 
-    // Dynamic budget: total 20k chars split evenly across tabs, max 6000 per tab
     const charsPerTab = Math.min(6000, Math.floor(20000 / selected.length))
 
-    // Extract content from each selected tab in parallel
     const contents = await Promise.all(
       selected.map((tab) =>
         new Promise<{ title: string; content: string } | null>((resolve) => {
@@ -135,7 +131,6 @@ export function SummarizeTab({ context, activeTabId }: Props) {
       )
     )
 
-    // Build combined context string
     const combined = contents
       .filter(Boolean)
       .map((c, i) => `--- Source ${i + 1}: "${c!.title}" ---\n${c!.content}`)
@@ -162,11 +157,11 @@ export function SummarizeTab({ context, activeTabId }: Props) {
   return (
     <div className="flex flex-col gap-4">
       {/* Mode toggle */}
-      <div className="flex rounded-lg bg-neutral-900 border border-white/10 p-1 gap-1">
+      <div className="flex rounded-lg bg-neutral-100 border border-neutral-200 p-1 gap-1">
         <button
           onClick={() => { setMode("page"); setError(null); setResult(null) }}
           className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            mode === "page" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+            mode === "page" ? "bg-violet-600 text-white" : "text-neutral-500 hover:text-neutral-700"
           }`}
         >
           📄 This Page
@@ -174,17 +169,15 @@ export function SummarizeTab({ context, activeTabId }: Props) {
         <button
           onClick={() => { setMode("research"); setError(null); setResult(null) }}
           className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            mode === "research" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+            mode === "research" ? "bg-violet-600 text-white" : "text-neutral-500 hover:text-neutral-700"
           }`}
         >
           🔬 Research
         </button>
       </div>
 
-      {/* ── This Page mode ── */}
       {mode === "page" && (
         <>
-          {/* Ask anything */}
           <div className="flex flex-col gap-2">
             <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
               Ask anything about this page
@@ -192,7 +185,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
             <div className="flex gap-2">
               <input
                 type="text"
-                className="flex-1 rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs px-3 py-2 focus:outline-none focus:border-violet-500/50 placeholder-neutral-600"
+                className="flex-1 rounded-lg bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs px-3 py-2 focus:outline-none focus:border-violet-500/50 placeholder-neutral-400"
                 placeholder='e.g. "What is the main argument?"'
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
@@ -208,14 +201,12 @@ export function SummarizeTab({ context, activeTabId }: Props) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-white/5" />
-            <span className="text-[10px] text-neutral-600">or use quick tools</span>
-            <div className="flex-1 h-px bg-white/5" />
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="text-[10px] text-neutral-400">or use quick tools</span>
+            <div className="flex-1 h-px bg-neutral-200" />
           </div>
 
-          {/* Quick tools */}
           <div className="grid grid-cols-2 gap-2">
             {QUICK_TOOLS.map(({ label, intent, icon }) => (
               <button
@@ -223,7 +214,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
                 onClick={() => runQuickTool(intent)}
                 disabled={loading}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  activeIntent === intent ? "bg-violet-600 text-white" : "bg-white/10 text-neutral-300 hover:bg-white/20"
+                  activeIntent === intent ? "bg-violet-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                 }`}
               >
                 <span>{icon}</span>
@@ -234,7 +225,6 @@ export function SummarizeTab({ context, activeTabId }: Props) {
         </>
       )}
 
-      {/* ── Research mode ── */}
       {mode === "research" && (
         <>
           <div className="flex flex-col gap-2">
@@ -243,8 +233,8 @@ export function SummarizeTab({ context, activeTabId }: Props) {
                 Open tabs ({selectedCount} selected)
               </label>
               <div className="flex gap-2">
-                <button onClick={() => toggleAll(true)} className="text-[10px] text-violet-400 hover:text-violet-300">All</button>
-                <span className="text-neutral-700">·</span>
+                <button onClick={() => toggleAll(true)} className="text-[10px] text-violet-600 hover:text-violet-500">All</button>
+                <span className="text-neutral-300">·</span>
                 <button onClick={() => toggleAll(false)} className="text-[10px] text-neutral-500 hover:text-neutral-400">None</button>
               </div>
             </div>
@@ -257,7 +247,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
                   <label
                     key={tab.id}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      tab.selected ? "bg-violet-600/10 border border-violet-500/20" : "bg-white/5 border border-transparent"
+                      tab.selected ? "bg-violet-50 border border-violet-200" : "bg-neutral-50 border border-transparent"
                     }`}
                   >
                     <input
@@ -267,8 +257,8 @@ export function SummarizeTab({ context, activeTabId }: Props) {
                       className="accent-violet-500 w-3.5 h-3.5 shrink-0"
                     />
                     <div className="flex flex-col min-w-0">
-                      <span className="text-xs text-neutral-200 truncate">{tab.title}</span>
-                      <span className="text-[10px] text-neutral-600 truncate">{new URL(tab.url).hostname}</span>
+                      <span className="text-xs text-neutral-700 truncate">{tab.title}</span>
+                      <span className="text-[10px] text-neutral-400 truncate">{new URL(tab.url).hostname}</span>
                     </div>
                   </label>
                 ))}
@@ -290,7 +280,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-4">
-          <div className="w-4 h-4 rounded-full border-2 border-neutral-700 border-t-violet-500 animate-spin" />
+          <div className="w-4 h-4 rounded-full border-2 border-neutral-300 border-t-violet-500 animate-spin" />
           <span className="text-xs text-neutral-500">
             {activeIntent === "multi_tab_summary" ? `Reading ${selectedCount} tabs...` : "Thinking..."}
           </span>
@@ -298,7 +288,7 @@ export function SummarizeTab({ context, activeTabId }: Props) {
       )}
 
       {error && !loading && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">{error}</div>
       )}
 
       {result && !loading && <ResultBox result={result} activeTabId={activeTabId} />}
