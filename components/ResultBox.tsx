@@ -6,6 +6,17 @@ interface Props {
   activeTabId: number | null
 }
 
+// Simple heuristic: if output contains common code patterns, treat it as code
+function looksLikeCode(text: string): boolean {
+  const codeIndicators = [
+    /^(def |class |function |const |let |var |import |from |#include|public |private )/m,
+    /[{}()];?\s*$/m,
+    /\b(return |if \(|for \(|while \(|=>)/,
+    /^\s{2,}(def|class|for|if|while|return)\b/m,
+  ]
+  return codeIndicators.some((pattern) => pattern.test(text))
+}
+
 export function ResultBox({ result, activeTabId }: Props) {
   const [replaced, setReplaced] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -33,6 +44,8 @@ export function ResultBox({ result, activeTabId }: Props) {
     )
   }
 
+  const isCode = result.output ? looksLikeCode(result.output) : false
+
   return (
     <div className="rounded-xl border border-white/10 bg-neutral-900 p-4 flex flex-col gap-3">
       {/* Action buttons */}
@@ -59,15 +72,23 @@ export function ResultBox({ result, activeTabId }: Props) {
 
       {/* Main output */}
       {result.output && (
-        <p className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap">
-          {result.output}
-        </p>
+        isCode ? (
+          <pre className="text-xs text-emerald-300 leading-relaxed whitespace-pre-wrap bg-neutral-950 rounded-lg p-3 border border-white/5 overflow-x-auto font-mono">
+            {result.output}
+          </pre>
+        ) : (
+          <p className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap">
+            {result.output}
+          </p>
+        )
       )}
 
       {/* Key points */}
       {result.structured?.keyPoints && result.structured.keyPoints.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold text-neutral-500">Key Points</span>
+          <span className="text-[11px] font-semibold text-neutral-500">
+            {isCode ? "Approach" : "Key Points"}
+          </span>
           <ul className="pl-4 flex flex-col gap-1 list-disc">
             {result.structured.keyPoints.map((p, i) => (
               <li key={i} className="text-xs text-neutral-300">{p}</li>

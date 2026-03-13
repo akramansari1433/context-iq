@@ -7,15 +7,8 @@ interface Props {
   activeTabId: number | null
 }
 
-const ACTIONS: { label: string; intent: Intent; icon: string }[] = [
-  { label: "Explain", intent: "explain", icon: "🧠" },
-  { label: "Debug", intent: "debug", icon: "🐛" },
-  { label: "Solve", intent: "solve", icon: "⚡" },
-  { label: "Extract Data", intent: "extract", icon: "📤" },
-]
-
 export function SolveTab({ context, activeTabId }: Props) {
-  const [userInput, setUserInput] = useState("")
+  const [instructions, setInstructions] = useState("")
   const [result, setResult] = useState<StructuredResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -30,7 +23,7 @@ export function SolveTab({ context, activeTabId }: Props) {
     chrome.runtime.sendMessage(
       {
         type: "RUN_AGENT",
-        payload: { intent, context, userInput: userInput || undefined },
+        payload: { intent, context, userInput: instructions || undefined },
       },
       (response) => {
         setLoading(false)
@@ -44,36 +37,56 @@ export function SolveTab({ context, activeTabId }: Props) {
     )
   }
 
+  const pageTitle = context.title?.slice(0, 60) || context.domain || "Current page"
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Page being analyzed */}
+      <div className="rounded-lg bg-neutral-900 border border-white/5 px-3 py-2 flex items-center gap-2">
+        <span className="text-neutral-500 text-xs">Reading:</span>
+        <span className="text-neutral-300 text-xs truncate">{pageTitle}</span>
+      </div>
+
+      {/* Instructions */}
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-          Question or instruction (optional)
+          Instructions (optional)
         </label>
         <textarea
-          className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600 min-h-[70px]"
-          placeholder="e.g. 'What does this error mean?' or 'How do I fix this?'"
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
+          className="w-full rounded-lg bg-neutral-900 border border-white/10 text-neutral-100 text-xs p-3 resize-none focus:outline-none focus:border-violet-500/50 placeholder-neutral-600"
+          style={{ minHeight: 70 }}
+          placeholder="e.g. 'Solve using Python', 'Explain in simple terms', 'Use dynamic programming'..."
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
         />
       </div>
 
+      {/* Actions */}
       <div className="grid grid-cols-2 gap-2">
-        {ACTIONS.map(({ label, intent, icon }) => (
-          <button
-            key={intent}
-            onClick={() => run(intent)}
-            disabled={loading}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-              activeIntent === intent
-                ? "bg-violet-600 text-white"
-                : "bg-white/10 text-neutral-300 hover:bg-white/20"
-            }`}
-          >
-            <span>{icon}</span>
-            <span>{activeIntent === intent ? "Working..." : label}</span>
-          </button>
-        ))}
+        <button
+          onClick={() => run("explain")}
+          disabled={loading}
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            activeIntent === "explain"
+              ? "bg-violet-600 text-white"
+              : "bg-white/10 text-neutral-300 hover:bg-white/20"
+          }`}
+        >
+          <span>🧠</span>
+          <span>{activeIntent === "explain" ? "Explaining..." : "Explain"}</span>
+        </button>
+        <button
+          onClick={() => run("solve")}
+          disabled={loading}
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            activeIntent === "solve"
+              ? "bg-violet-600 text-white"
+              : "bg-white/10 text-neutral-300 hover:bg-white/20"
+          }`}
+        >
+          <span>⚡</span>
+          <span>{activeIntent === "solve" ? "Solving..." : "Solve"}</span>
+        </button>
       </div>
 
       {loading && (
