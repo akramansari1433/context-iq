@@ -28,7 +28,7 @@ export function buildUserPrompt(
     : ""
   const pageLimit =
     intent === "multi_tab_summary"
-      ? 20000
+      ? 40000
       : intent === "ask_page"
         ? 48000
         : 8000
