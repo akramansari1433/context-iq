@@ -1,5 +1,5 @@
-import type { AgentRequest, StructuredResult, AgentType } from "./types"
-import { SYSTEM_PROMPT, buildUserPrompt } from "./prompts"
+import { buildUserPrompt, SYSTEM_PROMPT } from "./prompts"
+import type { AgentRequest, AgentType, StructuredResult } from "./types"
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 const MODEL = "llama-3.3-70b-versatile"
@@ -18,10 +18,12 @@ const AGENT_MAP: Record<string, AgentType> = {
   ask_page: "summary",
   multi_tab_summary: "summary",
   explain: "solver",
-  solve: "solver",
+  solve: "solver"
 }
 
-export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult> {
+export async function runGrokAgent(
+  req: AgentRequest
+): Promise<StructuredResult> {
   const startTime = Date.now()
   const agent: AgentType = AGENT_MAP[req.intent] ?? "solver"
 
@@ -37,18 +39,18 @@ export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult>
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${req.apiKey}`,
+      Authorization: `Bearer ${req.apiKey}`
     },
     body: JSON.stringify({
       model: MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
+        { role: "user", content: userPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 1500,
-      response_format: { type: "json_object" },
-    }),
+      max_tokens: req.intent === "ask_page" ? 2000 : 1500,
+      response_format: { type: "json_object" }
+    })
   })
 
   if (!response.ok) {
@@ -62,7 +64,10 @@ export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult>
   let parsed: Record<string, unknown> = {}
 
   try {
-    const cleaned = rawContent.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    const cleaned = rawContent
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim()
     parsed = JSON.parse(cleaned)
   } catch {
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/)
@@ -77,17 +82,20 @@ export async function runGrokAgent(req: AgentRequest): Promise<StructuredResult>
   return {
     intent: req.intent,
     agent,
-    output: (parsed.output as string) ?? (parsed.summary as string) ?? rawContent,
+    output:
+      (parsed.output as string) ?? (parsed.summary as string) ?? rawContent,
     structured: {
       keyPoints: parsed.keyPoints as string[],
       actionItems: parsed.actionItems as string[],
-      risks: parsed.risks as string[],
+      risks: parsed.risks as string[]
     },
     latencyMs: Date.now() - startTime,
-    tokenUsage: usage ? {
-      prompt: usage.prompt_tokens ?? 0,
-      completion: usage.completion_tokens ?? 0,
-      total: usage.total_tokens ?? 0,
-    } : undefined,
+    tokenUsage: usage
+      ? {
+          prompt: usage.prompt_tokens ?? 0,
+          completion: usage.completion_tokens ?? 0,
+          total: usage.total_tokens ?? 0
+        }
+      : undefined
   }
 }

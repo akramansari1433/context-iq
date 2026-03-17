@@ -1,10 +1,12 @@
 import "./style.css"
-import { useState, useEffect } from "react"
-import type { PageContext } from "./lib/types"
-import { WritingTab } from "./components/WritingTab"
-import { SummarizeTab } from "./components/SummarizeTab"
-import { SolveTab } from "./components/SolveTab"
+
+import { useEffect, useState } from "react"
+
 import { SettingsTab } from "./components/SettingsTab"
+import { SolveTab } from "./components/SolveTab"
+import { SummarizeTab } from "./components/SummarizeTab"
+import { WritingTab } from "./components/WritingTab"
+import type { PageContext } from "./lib/types"
 
 type Tab = "writing" | "summarize" | "solve" | "settings"
 
@@ -12,28 +14,39 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "writing", icon: "✍️", label: "Writing" },
   { id: "summarize", icon: "📋", label: "Summarize" },
   { id: "solve", icon: "🔍", label: "Solve" },
-  { id: "settings", icon: "⚙️", label: "Settings" },
+  { id: "settings", icon: "⚙️", label: "Settings" }
 ]
-
 
 function extractPageContextInPage() {
   const url = window.location.href
   const hostname = new URL(url).hostname
 
   const clone = document.body.cloneNode(true) as HTMLElement
-  clone.querySelectorAll("script, style, nav, footer, aside, [role=banner]").forEach((el) => el.remove())
+  clone
+    .querySelectorAll(
+      "script, style, nav, footer, aside, [role=banner], [role=navigation], " +
+        "[role=complementary], .sidebar, .comments, .ad, .advertisement, .social-share"
+    )
+    .forEach((el) => el.remove())
+
+  const mainContent = clone.querySelector(
+    "article, main, [role=main]"
+  ) as HTMLElement | null
+  const textSource = mainContent ?? clone
 
   return {
     title: document.title,
     url,
     domain: hostname,
-    bodyText: clone.innerText.slice(0, 16000).trim(),
+    bodyText: textSource.innerText.slice(0, 60000).trim(),
     headings: Array.from(document.querySelectorAll("h1, h2, h3"))
       .map((el) => el.textContent?.trim() ?? "")
       .filter(Boolean)
       .slice(0, 15),
     selectedText: window.getSelection()?.toString().trim() ?? "",
-    metaDescription: (document.querySelector('meta[name="description"]') as HTMLMetaElement)?.content ?? "",
+    metaDescription:
+      (document.querySelector('meta[name="description"]') as HTMLMetaElement)
+        ?.content ?? ""
   }
 }
 
@@ -68,7 +81,9 @@ export default function IndexPopup() {
             if (ctx) {
               setContext(ctx)
             } else {
-              setContextError("Could not read page context. Make sure you're on a web page.")
+              setContextError(
+                "Could not read page context. Make sure you're on a web page."
+              )
             }
           }
         )
@@ -102,8 +117,7 @@ export default function IndexPopup() {
               activeTab === id
                 ? "border-violet-500 text-violet-600"
                 : "border-transparent text-neutral-400 hover:text-neutral-600"
-            }`}
-          >
+            }`}>
             <span className="text-sm">{icon}</span>
             {label}
           </button>
@@ -119,10 +133,18 @@ export default function IndexPopup() {
         )}
 
         {activeTab === "writing" && context && (
-          <WritingTab key="writing" context={context} activeTabId={activeTabId} />
+          <WritingTab
+            key="writing"
+            context={context}
+            activeTabId={activeTabId}
+          />
         )}
         {activeTab === "summarize" && context && (
-          <SummarizeTab key="summarize" context={context} activeTabId={activeTabId} />
+          <SummarizeTab
+            key="summarize"
+            context={context}
+            activeTabId={activeTabId}
+          />
         )}
         {activeTab === "solve" && context && (
           <SolveTab key="solve" context={context} activeTabId={activeTabId} />

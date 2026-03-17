@@ -16,7 +16,11 @@ function captureEditableSelection() {
     const start = el.selectionStart ?? 0
     const end = el.selectionEnd ?? 0
     if (start !== end) {
-      lastEditableState = { element: el, selectionStart: start, selectionEnd: end }
+      lastEditableState = {
+        element: el,
+        selectionStart: start,
+        selectionEnd: end
+      }
     }
   }
 }
@@ -27,11 +31,20 @@ document.addEventListener("keyup", captureEditableSelection)
 
 // ── Page context extraction ──────────────────────────────────────────────────
 
-
 function extractBodyText(): string {
   const clone = document.body.cloneNode(true) as HTMLElement
-  clone.querySelectorAll("script, style, nav, footer, aside, [role=banner]").forEach((el) => el.remove())
-  return clone.innerText.slice(0, 8000).trim()
+  clone
+    .querySelectorAll(
+      "script, style, nav, footer, aside, [role=banner], [role=navigation], " +
+        "[role=complementary], .sidebar, .comments, .ad, .advertisement, .social-share"
+    )
+    .forEach((el) => el.remove())
+
+  const mainContent = clone.querySelector(
+    "article, main, [role=main]"
+  ) as HTMLElement | null
+  const textSource = mainContent ?? clone
+  return textSource.innerText.slice(0, 60000).trim()
 }
 
 function extractHeadings(): string[] {
@@ -50,7 +63,9 @@ function getPageContext(): PageContext {
 
   if (lastEditableState) {
     const { element, selectionStart, selectionEnd } = lastEditableState
-    const editableSelected = element.value.slice(selectionStart, selectionEnd).trim()
+    const editableSelected = element.value
+      .slice(selectionStart, selectionEnd)
+      .trim()
     if (editableSelected) {
       selectedText = editableSelected
       isEditableSelection = true
@@ -65,8 +80,10 @@ function getPageContext(): PageContext {
     bodyText: extractBodyText(),
     headings: extractHeadings(),
     selectedText,
-    metaDescription: (document.querySelector('meta[name="description"]') as HTMLMetaElement)?.content ?? "",
-    isEditableSelection,
+    metaDescription:
+      (document.querySelector('meta[name="description"]') as HTMLMetaElement)
+        ?.content ?? "",
+    isEditableSelection
   }
 }
 
@@ -80,7 +97,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "REPLACE_SELECTED_TEXT") {
     if (!lastEditableState) {
-      sendResponse({ success: false, error: "No editable selection tracked. Select text in an input or textarea first." })
+      sendResponse({
+        success: false,
+        error:
+          "No editable selection tracked. Select text in an input or textarea first."
+      })
       return true
     }
 
@@ -89,7 +110,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const original = element.value
 
     // Replace just the selected range with the new text
-    element.value = original.slice(0, selectionStart) + newText + original.slice(selectionEnd)
+    element.value =
+      original.slice(0, selectionStart) + newText + original.slice(selectionEnd)
 
     // Move cursor to end of inserted text
     element.selectionStart = selectionStart
@@ -101,7 +123,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     element.dispatchEvent(new Event("change", { bubbles: true }))
 
     // Keep state pointing to the element with the new selection so chained replaces work
-    lastEditableState = { element, selectionStart, selectionEnd: selectionStart + newText.length }
+    lastEditableState = {
+      element,
+      selectionStart,
+      selectionEnd: selectionStart + newText.length
+    }
     sendResponse({ success: true })
     return true
   }

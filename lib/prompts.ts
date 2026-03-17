@@ -1,27 +1,50 @@
 import type { Intent, ToneOption } from "./types"
 
-
-const WRITING_INTENTS = new Set(["fix_grammar", "rewrite", "change_tone", "expand", "shorten", "draft"])
+const WRITING_INTENTS = new Set([
+  "fix_grammar",
+  "rewrite",
+  "change_tone",
+  "expand",
+  "shorten",
+  "draft"
+])
 
 export const SYSTEM_PROMPT = `You are ContextIQ, a helpful browser AI assistant.
 You provide clear, accurate, and natural-sounding responses — like a smart friend who read the page carefully.
 Always respond in valid JSON matching the requested schema.`
 
-export function buildUserPrompt(intent: Intent, context: string, selectedText: string, tone?: ToneOption, userInput?: string): string {
+export function buildUserPrompt(
+  intent: Intent,
+  context: string,
+  selectedText: string,
+  tone?: ToneOption,
+  userInput?: string
+): string {
   const toneStr = tone ? `Tone: ${tone}.` : ""
   const isWriting = WRITING_INTENTS.has(intent)
 
-  const selectedStr = selectedText ? `\n\nText to process:\n"""${selectedText}"""` : ""
-  const pageLimit = intent === "multi_tab_summary" ? 20000 : intent === "ask_page" ? 16000 : 8000
-  const pageStr = !isWriting && context ? `\n\nPage context:\n"""${context.slice(0, pageLimit)}"""` : ""
+  const selectedStr = selectedText
+    ? `\n\nText to process:\n"""${selectedText}"""`
+    : ""
+  const pageLimit =
+    intent === "multi_tab_summary"
+      ? 20000
+      : intent === "ask_page"
+        ? 48000
+        : 8000
+  const pageStr =
+    !isWriting && context
+      ? `\n\nPage context:\n"""${context.slice(0, pageLimit)}"""`
+      : ""
   const customStr = userInput ? `\n\nUser instruction: ${userInput}` : ""
 
   const schemas: Record<Intent, string> = {
     fix_grammar: `Fix grammar and spelling errors in the provided text. Output ONLY the corrected version of that exact text. Return: {"output": "corrected text only"}`,
     rewrite: `Rewrite the provided text to improve clarity and flow. ${toneStr} Output ONLY the rewritten version of that exact text. Return: {"output": "rewritten text only"}`,
-    change_tone: tone === "emojify"
-      ? `Add relevant emojis throughout the provided text to make it more expressive and fun. Keep all the original words — only add emojis. Output ONLY the emojified version. Return: {"output": "emojified text only"}`
-      : `Change the tone of the provided text to ${tone ?? "professional"}. Output ONLY the tone-adjusted version of that exact text. Return: {"output": "tone-adjusted text only"}`,
+    change_tone:
+      tone === "emojify"
+        ? `Add relevant emojis throughout the provided text to make it more expressive and fun. Keep all the original words — only add emojis. Output ONLY the emojified version. Return: {"output": "emojified text only"}`
+        : `Change the tone of the provided text to ${tone ?? "professional"}. Output ONLY the tone-adjusted version of that exact text. Return: {"output": "tone-adjusted text only"}`,
     expand: `Expand the provided text with more relevant detail. Output ONLY the expanded version of that exact text. Return: {"output": "expanded text only"}`,
     shorten: `Shorten the provided text while keeping all key information. Output ONLY the shortened version of that exact text. Return: {"output": "shortened text only"}`,
     draft: `Draft a message based on the user's description. ${toneStr} Write it in a ${tone ?? "professional"} tone. Return: {"output": "drafted message"}`,
@@ -32,7 +55,7 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
     ask_page: `Answer the user's question using the page content provided. Respond naturally and conversationally — like a knowledgeable friend explaining something. Use clear, everyday language. If relevant, include helpful context, examples, or nuances from the page that enrich the answer. Don't just state bare facts — briefly explain *why* something matters when it adds value. If the page doesn't contain enough info to fully answer, say so honestly. Return: {"output": "your conversational answer"}`,
     multi_tab_summary: `You are given content from multiple browser tabs the user has open. Synthesize them into a unified research summary. Identify common themes, key findings, and any conflicting information across sources. Return: {"output": "unified summary paragraph", "keyPoints": ["theme or finding 1", ...]}`,
     explain: `Explain what the problem is, why it happens, and how to approach solving it. Give hints and guide the user's thinking without giving the full solution. Return: {"output": "clear explanation with hints"}`,
-    solve: `Solve the problem. If it is a coding/algorithm problem, provide a complete working code solution — not pseudocode, not descriptions. If the user specified a language, use that language, otherwise default to Python. Include brief comments in the code. Return: {"output": "the complete code solution", "keyPoints": ["brief explanation of approach"]}`,
+    solve: `Solve the problem. If it is a coding/algorithm problem, provide a complete working code solution — not pseudocode, not descriptions. If the user specified a language, use that language, otherwise default to Python. Include brief comments in the code. Return: {"output": "the complete code solution", "keyPoints": ["brief explanation of approach"]}`
   }
 
   return `${schemas[intent]}${selectedStr}${pageStr}${customStr}
