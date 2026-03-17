@@ -27,7 +27,7 @@ function extractPageContextInPage() {
     title: document.title,
     url,
     domain: hostname,
-    bodyText: clone.innerText.slice(0, 8000).trim(),
+    bodyText: clone.innerText.slice(0, 16000).trim(),
     headings: Array.from(document.querySelectorAll("h1, h2, h3"))
       .map((el) => el.textContent?.trim() ?? "")
       .filter(Boolean)

@@ -4,7 +4,7 @@ import type { Intent, ToneOption } from "./types"
 const WRITING_INTENTS = new Set(["fix_grammar", "rewrite", "change_tone", "expand", "shorten", "draft"])
 
 export const SYSTEM_PROMPT = `You are ContextIQ, a helpful browser AI assistant.
-You provide concise, accurate responses.
+You provide clear, accurate, and natural-sounding responses — like a smart friend who read the page carefully.
 Always respond in valid JSON matching the requested schema.`
 
 export function buildUserPrompt(intent: Intent, context: string, selectedText: string, tone?: ToneOption, userInput?: string): string {
@@ -12,7 +12,7 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
   const isWriting = WRITING_INTENTS.has(intent)
 
   const selectedStr = selectedText ? `\n\nText to process:\n"""${selectedText}"""` : ""
-  const pageLimit = intent === "multi_tab_summary" ? 20000 : 8000
+  const pageLimit = intent === "multi_tab_summary" ? 20000 : intent === "ask_page" ? 16000 : 8000
   const pageStr = !isWriting && context ? `\n\nPage context:\n"""${context.slice(0, pageLimit)}"""` : ""
   const customStr = userInput ? `\n\nUser instruction: ${userInput}` : ""
 
@@ -29,7 +29,7 @@ export function buildUserPrompt(intent: Intent, context: string, selectedText: s
     key_insights: `Extract key insights and important information. Return: {"summary": "brief overview", "keyPoints": ["insight 1", ...]}`,
     action_items: `Extract all action items and next steps from the content. Return: {"actionItems": ["action 1", ...]}`,
     risk_flags: `Identify risks, concerns, and warnings in the content. Return: {"risks": ["risk 1", ...], "summary": "overall risk assessment"}`,
-    ask_page: `Answer the user's question based strictly on the page content. Be direct and concise. Return: {"output": "answer", "keyPoints": ["supporting point 1", ...]}`,
+    ask_page: `Answer the user's question using the page content provided. Respond naturally and conversationally — like a knowledgeable friend explaining something. Use clear, everyday language. If relevant, include helpful context, examples, or nuances from the page that enrich the answer. Don't just state bare facts — briefly explain *why* something matters when it adds value. If the page doesn't contain enough info to fully answer, say so honestly. Return: {"output": "your conversational answer"}`,
     multi_tab_summary: `You are given content from multiple browser tabs the user has open. Synthesize them into a unified research summary. Identify common themes, key findings, and any conflicting information across sources. Return: {"output": "unified summary paragraph", "keyPoints": ["theme or finding 1", ...]}`,
     explain: `Explain what the problem is, why it happens, and how to approach solving it. Give hints and guide the user's thinking without giving the full solution. Return: {"output": "clear explanation with hints"}`,
     solve: `Solve the problem. If it is a coding/algorithm problem, provide a complete working code solution — not pseudocode, not descriptions. If the user specified a language, use that language, otherwise default to Python. Include brief comments in the code. Return: {"output": "the complete code solution", "keyPoints": ["brief explanation of approach"]}`,
