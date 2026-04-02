@@ -1,7 +1,7 @@
 {
   "name": "contextiq",
   "displayName": "ContextIQ — Browser AI Agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Domain-aware, multi-agent browser intelligence assistant powered by Grok AI.",
   "author": "ContextIQ",
   "scripts": {
