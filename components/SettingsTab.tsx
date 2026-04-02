@@ -1,16 +1,46 @@
 import { useState, useEffect } from "react"
+
 import type { LogEntry } from "../lib/logger"
+import { PROVIDERS, getModel } from "../lib/providers"
+import type { ProviderId } from "../lib/providers"
 
 interface Props {
   apiKey: string
   setApiKey: (key: string) => void
   apiKeySaved: boolean
   onSave: () => void
+  providerId: ProviderId
+  setProviderId: (id: ProviderId) => void
+  modelId: string
+  setModelId: (id: string) => void
+  customBaseUrl: string
+  setCustomBaseUrl: (url: string) => void
+  customModelId: string
+  setCustomModelId: (id: string) => void
 }
 
-export function SettingsTab({ apiKey, setApiKey, apiKeySaved, onSave }: Props) {
+const inputClasses =
+  "w-full rounded-lg bg-neutral-100 border border-neutral-200 text-neutral-800 text-sm px-3 py-2 focus:outline-none focus:border-violet-500/50 placeholder-neutral-400"
+
+export function SettingsTab({
+  apiKey,
+  setApiKey,
+  apiKeySaved,
+  onSave,
+  providerId,
+  setProviderId,
+  modelId,
+  setModelId,
+  customBaseUrl,
+  setCustomBaseUrl,
+  customModelId,
+  setCustomModelId
+}: Props) {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [showLogs, setShowLogs] = useState(false)
+
+  const provider = PROVIDERS[providerId]
+  const selectedModel = getModel(providerId, modelId)
 
   const loadLogs = () => {
     chrome.runtime.sendMessage({ type: "GET_LOGS" }, (res) => {
@@ -28,24 +58,113 @@ export function SettingsTab({ apiKey, setApiKey, apiKeySaved, onSave }: Props) {
     if (showLogs) loadLogs()
   }, [showLogs])
 
+  const handleProviderChange = (newId: ProviderId) => {
+    setProviderId(newId)
+    const newProvider = PROVIDERS[newId]
+    if (newProvider.models.length > 0) {
+      setModelId(newProvider.models[0].id)
+    }
+  }
+
+  const displayModelName =
+    providerId === "custom"
+      ? customModelId || "Custom Model"
+      : selectedModel?.name ?? modelId
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Provider selector */}
       <div className="flex flex-col gap-1.5">
         <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-          Groq API Key
+          AI Provider
+        </label>
+        <select
+          className={inputClasses}
+          value={providerId}
+          onChange={(e) => handleProviderChange(e.target.value as ProviderId)}
+        >
+          {Object.values(PROVIDERS).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Model selector (hidden for custom) */}
+      {providerId !== "custom" && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+            Model
+          </label>
+          <select
+            className={inputClasses}
+            value={modelId}
+            onChange={(e) => setModelId(e.target.value)}
+          >
+            {provider.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          {selectedModel && (
+            <p className="text-[11px] text-neutral-500 leading-relaxed">
+              {selectedModel.description}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Custom provider fields */}
+      {providerId === "custom" && (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+              Base URL
+            </label>
+            <input
+              type="text"
+              className={inputClasses}
+              value={customBaseUrl}
+              onChange={(e) => setCustomBaseUrl(e.target.value)}
+              placeholder="https://api.openrouter.ai/v1"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+              Model ID
+            </label>
+            <input
+              type="text"
+              className={inputClasses}
+              value={customModelId}
+              onChange={(e) => setCustomModelId(e.target.value)}
+              placeholder="meta-llama/llama-3.3-70b"
+            />
+          </div>
+        </>
+      )}
+
+      {/* API Key */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+          {provider.apiKeyLabel}
         </label>
         <input
           type="password"
-          className="w-full rounded-lg bg-neutral-100 border border-neutral-200 text-neutral-800 text-sm px-3 py-2 focus:outline-none focus:border-violet-500/50 placeholder-neutral-400"
+          className={inputClasses}
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          placeholder="gsk_..."
+          placeholder={provider.apiKeyPrefix ? `${provider.apiKeyPrefix}...` : "Enter API key"}
         />
-        <p className="text-[11px] text-neutral-500 leading-relaxed">
-          Get your free key at{" "}
-          <span className="text-violet-600">console.groq.com</span>. Stored locally in
-          Chrome's encrypted storage — never sent anywhere else.
-        </p>
+        {provider.apiKeyHelpUrl && (
+          <p className="text-[11px] text-neutral-500 leading-relaxed">
+            Get your key at{" "}
+            <span className="text-violet-600">{provider.apiKeyHelpUrl}</span>. Stored locally in
+            Chrome's encrypted storage — never sent anywhere else.
+          </p>
+        )}
       </div>
 
       <button
@@ -56,7 +175,7 @@ export function SettingsTab({ apiKey, setApiKey, apiKeySaved, onSave }: Props) {
             : "bg-violet-600 hover:bg-violet-500 text-white"
         }`}
       >
-        {apiKeySaved ? "✓ Saved!" : "Save API Key"}
+        {apiKeySaved ? "✓ Saved!" : "Save Settings"}
       </button>
 
       <div className="border-t border-neutral-200 pt-4 flex flex-col gap-2">
@@ -66,7 +185,9 @@ export function SettingsTab({ apiKey, setApiKey, apiKeySaved, onSave }: Props) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-neutral-500">Model</span>
-          <span className="text-[11px] text-neutral-600">llama-3.3-70b (Groq)</span>
+          <span className="text-[11px] text-neutral-600">
+            {displayModelName} ({provider.name})
+          </span>
         </div>
       </div>
 

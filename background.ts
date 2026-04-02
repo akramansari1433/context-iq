@@ -1,12 +1,32 @@
-import { runGrokAgent } from "./lib/grok-client"
+import { runAgent } from "./lib/api-client"
 import { log, getLogs, clearLogs } from "./lib/logger"
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./lib/providers"
+import type { ProviderId } from "./lib/providers"
 import { checkRateLimit } from "./lib/rate-limiter"
 import { validateInput, sanitizeInput } from "./lib/security"
 import type { MessageRequest, MessageResponse, AgentRequest } from "./lib/types"
 
-async function getApiKey(): Promise<string | null> {
-  const result = await chrome.storage.sync.get("contextiq_api_key")
-  return result.contextiq_api_key ?? null
+interface StoredConfig {
+  apiKey: string | null
+  providerId: ProviderId
+  modelId: string
+  customBaseUrl?: string
+}
+
+async function getStoredConfig(): Promise<StoredConfig> {
+  const result = await chrome.storage.sync.get([
+    "contextiq_api_key",
+    "contextiq_provider",
+    "contextiq_model",
+    "contextiq_custom_base_url",
+    "contextiq_custom_model_id"
+  ])
+  return {
+    apiKey: result.contextiq_api_key ?? null,
+    providerId: (result.contextiq_provider as ProviderId) ?? DEFAULT_PROVIDER,
+    modelId: result.contextiq_model ?? result.contextiq_custom_model_id ?? DEFAULT_MODEL,
+    customBaseUrl: result.contextiq_custom_base_url
+  }
 }
 
 chrome.runtime.onMessage.addListener((message: MessageRequest, _sender, sendResponse) => {
@@ -28,9 +48,9 @@ async function handleMessage(message: MessageRequest): Promise<MessageResponse> 
   }
 
   if (message.type === "RUN_AGENT") {
-    const apiKey = await getApiKey()
-    if (!apiKey) {
-      return { success: false, error: "API key not configured. Go to Settings to add your Groq API key." }
+    const config = await getStoredConfig()
+    if (!config.apiKey) {
+      return { success: false, error: "API key not configured. Go to Settings to add your API key." }
     }
 
     // Rate limit check
@@ -56,11 +76,17 @@ async function handleMessage(message: MessageRequest): Promise<MessageResponse> 
       payload.context = { ...payload.context, selectedText: sanitizeInput(payload.context.selectedText) }
     }
 
-    const req: AgentRequest = { ...payload, apiKey }
+    const req: AgentRequest = {
+      ...payload,
+      apiKey: config.apiKey,
+      providerId: config.providerId,
+      modelId: config.modelId,
+      customBaseUrl: config.customBaseUrl
+    }
     const inputLength = (req.context.bodyText?.length ?? 0) + (req.context.selectedText?.length ?? 0) + (req.userInput?.length ?? 0)
 
     try {
-      const result = await runGrokAgent(req)
+      const result = await runAgent(req)
 
       // Log success
       await log({

@@ -6,6 +6,8 @@ import { SettingsTab } from "./components/SettingsTab"
 import { SolveTab } from "./components/SolveTab"
 import { SummarizeTab } from "./components/SummarizeTab"
 import { WritingTab } from "./components/WritingTab"
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./lib/providers"
+import type { ProviderId } from "./lib/providers"
 import type { PageContext } from "./lib/types"
 
 type Tab = "writing" | "summarize" | "solve" | "settings"
@@ -57,11 +59,22 @@ export default function IndexPopup() {
   const [apiKey, setApiKey] = useState("")
   const [apiKeySaved, setApiKeySaved] = useState(false)
   const [contextError, setContextError] = useState<string | null>(null)
+  const [providerId, setProviderId] = useState<ProviderId>(DEFAULT_PROVIDER)
+  const [modelId, setModelId] = useState(DEFAULT_MODEL)
+  const [customBaseUrl, setCustomBaseUrl] = useState("")
+  const [customModelId, setCustomModelId] = useState("")
 
   useEffect(() => {
-    chrome.storage.sync.get("contextiq_api_key", (res) => {
-      if (res.contextiq_api_key) setApiKey(res.contextiq_api_key)
-    })
+    chrome.storage.sync.get(
+      ["contextiq_api_key", "contextiq_provider", "contextiq_model", "contextiq_custom_base_url", "contextiq_custom_model_id"],
+      (res) => {
+        if (res.contextiq_api_key) setApiKey(res.contextiq_api_key)
+        if (res.contextiq_provider) setProviderId(res.contextiq_provider as ProviderId)
+        if (res.contextiq_model) setModelId(res.contextiq_model)
+        if (res.contextiq_custom_base_url) setCustomBaseUrl(res.contextiq_custom_base_url)
+        if (res.contextiq_custom_model_id) setCustomModelId(res.contextiq_custom_model_id)
+      }
+    )
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0]
@@ -91,8 +104,15 @@ export default function IndexPopup() {
     })
   }, [])
 
-  const saveApiKey = () => {
-    chrome.storage.sync.set({ contextiq_api_key: apiKey }, () => {
+  const saveSettings = () => {
+    const effectiveModelId = providerId === "custom" ? customModelId : modelId
+    chrome.storage.sync.set({
+      contextiq_api_key: apiKey,
+      contextiq_provider: providerId,
+      contextiq_model: effectiveModelId,
+      contextiq_custom_base_url: customBaseUrl,
+      contextiq_custom_model_id: customModelId
+    }, () => {
       setApiKeySaved(true)
       setTimeout(() => setApiKeySaved(false), 2000)
     })
@@ -154,7 +174,15 @@ export default function IndexPopup() {
             apiKey={apiKey}
             setApiKey={setApiKey}
             apiKeySaved={apiKeySaved}
-            onSave={saveApiKey}
+            onSave={saveSettings}
+            providerId={providerId}
+            setProviderId={setProviderId}
+            modelId={modelId}
+            setModelId={setModelId}
+            customBaseUrl={customBaseUrl}
+            setCustomBaseUrl={setCustomBaseUrl}
+            customModelId={customModelId}
+            setCustomModelId={setCustomModelId}
           />
         )}
       </div>

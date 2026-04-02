@@ -1,3 +1,5 @@
+import type { ProviderId } from "./providers"
+
 export type Intent = "fix_grammar" | "rewrite" | "change_tone" | "expand" | "shorten" | "draft" | "bullet_summary" | "key_insights" | "action_items" | "risk_flags" | "ask_page" | "multi_tab_summary" | "explain" | "solve"
 
 export type AgentType = "writing" | "summary" | "solver"
@@ -22,6 +24,16 @@ export interface AgentRequest {
   userInput?: string
   tone?: ToneOption
   apiKey: string
+  providerId: ProviderId
+  modelId: string
+  customBaseUrl?: string
+}
+
+export interface ModelSettings {
+  providerId: ProviderId
+  modelId: string
+  customBaseUrl?: string
+  customModelId?: string
 }
 
 export interface StructuredResult {
@@ -39,7 +51,7 @@ export interface StructuredResult {
 
 export type MessageRequest =
   | { type: "GET_CONTEXT" }
-  | { type: "RUN_AGENT"; payload: Omit<AgentRequest, "apiKey"> }
+  | { type: "RUN_AGENT"; payload: Omit<AgentRequest, "apiKey" | "providerId" | "modelId" | "customBaseUrl"> }
   | { type: "GET_LOGS" }
   | { type: "CLEAR_LOGS" }
 
