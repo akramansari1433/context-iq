@@ -54,7 +54,7 @@ async function handleMessage(message: MessageRequest): Promise<MessageResponse> 
     }
 
     // Rate limit check
-    const rateCheck = checkRateLimit()
+    const rateCheck = await checkRateLimit()
     if (!rateCheck.allowed) {
       const secs = Math.ceil((rateCheck.retryAfterMs ?? 0) / 1000)
       return { success: false, error: `Rate limit reached. Please wait ${secs}s before trying again.` }
@@ -69,11 +69,13 @@ async function handleMessage(message: MessageRequest): Promise<MessageResponse> 
       }
     }
 
-    // Sanitize inputs
+    // Sanitize inputs (including bodyText — untrusted page content)
     const payload = { ...message.payload }
     if (payload.userInput) payload.userInput = sanitizeInput(payload.userInput)
-    if (payload.context?.selectedText) {
-      payload.context = { ...payload.context, selectedText: sanitizeInput(payload.context.selectedText) }
+    if (payload.context) {
+      payload.context = { ...payload.context }
+      if (payload.context.selectedText) payload.context.selectedText = sanitizeInput(payload.context.selectedText)
+      if (payload.context.bodyText) payload.context.bodyText = sanitizeInput(payload.context.bodyText)
     }
 
     const req: AgentRequest = {
@@ -108,7 +110,7 @@ async function handleMessage(message: MessageRequest): Promise<MessageResponse> 
       await log({
         timestamp: Date.now(),
         intent: req.intent,
-        agent: "writing",
+        agent: req.intent,
         latencyMs: 0,
         success: false,
         error,

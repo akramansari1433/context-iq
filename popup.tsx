@@ -6,6 +6,7 @@ import { SettingsTab } from "./components/SettingsTab"
 import { SolveTab } from "./components/SolveTab"
 import { SummarizeTab } from "./components/SummarizeTab"
 import { WritingTab } from "./components/WritingTab"
+import { extractBodyText, extractHeadings } from "./lib/extract-content"
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./lib/providers"
 import type { ProviderId } from "./lib/providers"
 import type { PageContext } from "./lib/types"
@@ -20,26 +21,23 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 ]
 
 function extractPageContextInPage() {
+  // Self-contained for chrome.scripting.executeScript injection — cannot use imports.
+  // Mirrors logic from lib/extract-content.ts.
   const url = window.location.href
-  const hostname = new URL(url).hostname
-
   const clone = document.body.cloneNode(true) as HTMLElement
   clone
     .querySelectorAll(
-      "script, style, nav, footer, aside, [role=banner], [role=navigation], " +
+      "script, style, nav, footer, aside, header, [role=banner], [role=navigation], " +
         "[role=complementary], .sidebar, .comments, .ad, .advertisement, .social-share"
     )
     .forEach((el) => el.remove())
-
-  const mainContent = clone.querySelector(
-    "article, main, [role=main]"
-  ) as HTMLElement | null
+  const mainContent = clone.querySelector("article, main, [role=main]") as HTMLElement | null
   const textSource = mainContent ?? clone
 
   return {
     title: document.title,
     url,
-    domain: hostname,
+    domain: new URL(url).hostname,
     bodyText: textSource.innerText.slice(0, 60000).trim(),
     headings: Array.from(document.querySelectorAll("h1, h2, h3"))
       .map((el) => el.textContent?.trim() ?? "")

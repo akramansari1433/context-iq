@@ -2,6 +2,55 @@ import { buildUserPrompt, SYSTEM_PROMPT } from "./prompts"
 import { getModel, getProvider } from "./providers"
 import type { AgentRequest, AgentType, StructuredResult } from "./types"
 
+const REQUEST_TIMEOUT_MS = 30_000
+const MAX_RETRIES = 2
+const RETRY_BASE_MS = 1000
+
+async function fetchWithTimeout(
+  url: string,
+  opts: RequestInit,
+  timeoutMs = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal })
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function isRetryable(status: number): boolean {
+  return status === 429 || status >= 500
+}
+
+async function fetchWithRetry(
+  url: string,
+  opts: RequestInit,
+  timeoutMs = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, opts, timeoutMs)
+      if (response.ok || !isRetryable(response.status) || attempt === MAX_RETRIES) {
+        return response
+      }
+      lastError = new Error(`API error ${response.status}`)
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (attempt === MAX_RETRIES) break
+    }
+    await new Promise((r) => setTimeout(r, RETRY_BASE_MS * 2 ** attempt))
+  }
+  throw lastError
+}
+
 const AGENT_MAP: Record<string, AgentType> = {
   fix_grammar: "writing",
   rewrite: "writing",
@@ -58,7 +107,7 @@ async function callOpenAICompatible(
     body.response_format = { type: "json_object" }
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const response = await fetchWithRetry(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -93,7 +142,7 @@ async function callAnthropic(
   userPrompt: string,
   maxTokens: number
 ): Promise<{ text: string; usage?: { prompt: number; completion: number; total: number } }> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -137,7 +186,7 @@ async function callGoogle(
 ): Promise<{ text: string; usage?: { prompt: number; completion: number; total: number } }> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { extractBodyText, extractHeadings } from "./lib/extract-content"
 import type { PageContext } from "./lib/types"
 
 // ── Editable selection tracking ──────────────────────────────────────────────
@@ -30,29 +31,6 @@ document.addEventListener("mouseup", captureEditableSelection)
 document.addEventListener("keyup", captureEditableSelection)
 
 // ── Page context extraction ──────────────────────────────────────────────────
-
-function extractBodyText(): string {
-  const clone = document.body.cloneNode(true) as HTMLElement
-  clone
-    .querySelectorAll(
-      "script, style, nav, footer, aside, [role=banner], [role=navigation], " +
-        "[role=complementary], .sidebar, .comments, .ad, .advertisement, .social-share"
-    )
-    .forEach((el) => el.remove())
-
-  const mainContent = clone.querySelector(
-    "article, main, [role=main]"
-  ) as HTMLElement | null
-  const textSource = mainContent ?? clone
-  return textSource.innerText.slice(0, 60000).trim()
-}
-
-function extractHeadings(): string[] {
-  return Array.from(document.querySelectorAll("h1, h2, h3"))
-    .map((el) => el.textContent?.trim() ?? "")
-    .filter(Boolean)
-    .slice(0, 15)
-}
 
 function getPageContext(): PageContext {
   const url = window.location.href

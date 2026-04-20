@@ -3,7 +3,7 @@ import type { Intent, AgentType } from "./types"
 export interface LogEntry {
   timestamp: number
   intent: Intent
-  agent: AgentType
+  agent: AgentType | string
   latencyMs: number
   success: boolean
   error?: string
